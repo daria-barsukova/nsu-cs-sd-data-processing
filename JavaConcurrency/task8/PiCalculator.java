@@ -8,13 +8,12 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PiCalculator implements Runnable {
     private static final int THREAD = 4;
     private final int startIndex;
-    private final int iterationsPerThread;
     private final AtomicReference<Double> pi;
     private final CyclicBarrier barrier;
+    private int iterationCount = 0;
 
-    public PiCalculator(int startIndex, int iterationsPerThread, AtomicReference<Double> pi, CyclicBarrier barrier) {
+    public PiCalculator(int startIndex, AtomicReference<Double> pi, CyclicBarrier barrier) {
         this.startIndex = startIndex;
-        this.iterationsPerThread = iterationsPerThread;
         this.pi = pi;
         this.barrier = barrier;
     }
@@ -22,19 +21,21 @@ public class PiCalculator implements Runnable {
     @Override
     public void run() {
         double localSum = 0.0;
+        int iteration = 0;
 
-        // calculate partial sum for this thread
-        for (int j = 0; j < iterationsPerThread; j++) {
-            int termIndex = calculateTermIndex(j);
+        while (!Thread.currentThread().isInterrupted()) {
+            int termIndex = calculateTermIndex(iteration);
             localSum += calculateLeibnizTerm(termIndex);
+            iterationCount++;
 
             // barrier synchronization to wait for other threads
             if (!awaitBarrier()) {
                 break;
             }
+
+            iteration++;
         }
 
-        // update shared Pi value atomically
         double finalLocalSum = localSum;
         pi.updateAndGet(currentValue -> currentValue + finalLocalSum);
     }
@@ -58,5 +59,9 @@ public class PiCalculator implements Runnable {
             Thread.currentThread().interrupt();
             return false;
         }
+    }
+
+    public int getIterationCount() {
+        return iterationCount;
     }
 }

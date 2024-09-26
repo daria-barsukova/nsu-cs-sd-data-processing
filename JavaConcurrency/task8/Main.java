@@ -6,8 +6,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class Main {
     private static final int THREAD = 4;
-    private static final int ITERATIONS = 1000000;
     private static final AtomicReference<Double> pi = new AtomicReference<>(0.0);
+    private static final PiCalculator[] calculators = new PiCalculator[THREAD];
     private static final Thread[] threads = new Thread[THREAD];
 
     public static void main(String[] args) {
@@ -20,7 +20,8 @@ public class Main {
 
     private static void startThreads(CyclicBarrier barrier) {
         for (int i = 0; i < THREAD; i++) {
-            threads[i] = new Thread(new PiCalculator(i, ITERATIONS, pi, barrier));
+            calculators[i] = new PiCalculator(i, pi, barrier);
+            threads[i] = new Thread(calculators[i]);
             threads[i].start();
         }
     }
@@ -42,6 +43,11 @@ public class Main {
                 throw new RuntimeException("Failed to join thread", e);
             }
         }
+
+        for (int i = 0; i < THREAD; i++) {
+            System.out.println("Thread " + i + " completed iterations: " + calculators[i].getIterationCount());
+        }
+
         double newPi = pi.get() * 4;
         System.out.println("Pi: " + newPi);
     }
